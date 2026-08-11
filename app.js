@@ -20,6 +20,7 @@
     refs: { subject: [], picture: [], video: [], audio: [] }
   });
   const clone = value => JSON.parse(JSON.stringify(value));
+  const safeFilename = name => (name || 'minimax-h3-prompt').replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'minimax-h3-prompt';
   function normalizeState(candidate) {
     const next = { ...defaultState(), ...(candidate || {}) };
     next.refs ||= { subject: [], picture: [], video: [], audio: [] };
@@ -29,7 +30,7 @@
   }
   function makePrompt(name, promptState = defaultState()) {
     const now = new Date().toISOString();
-    return { id: uid(), name: name.trim() || 'Untitled prompt', createdAt: now, updatedAt: now, state: normalizeState(promptState) };
+    return { id: uid(), name: String(name || '').trim() || 'Untitled prompt', createdAt: now, updatedAt: now, state: normalizeState(promptState) };
   }
   function loadLibrary() {
     try {
@@ -88,6 +89,7 @@
     $('#delete-prompt').disabled = library.prompts.length === 1;
     $('#prompt-library-status').textContent = `${library.prompts.length} saved prompt${library.prompts.length === 1 ? '' : 's'} stored locally. Changes to “${active.name}” save automatically.`;
   }
+  function setLibraryStatus(message) { $('#prompt-library-status').textContent = message; }
   function reindex() {
     state.shots.forEach((shot, index) => { shot.number = index + 1; });
     state.keyframes.forEach((frame, index) => { frame.number = index + 1; });
@@ -251,6 +253,38 @@
     const source = activePrompt(); const prompt = makePrompt(`${source.name} copy`, clone(state));
     library.prompts.push(prompt); library.activePromptId = prompt.id; state = prompt.state;
     saveLibrary(); renderAll(); $('#prompt-name').focus(); $('#prompt-name').select();
+  });
+  $('#export-prompt').addEventListener('click', () => {
+    syncFormState(); saveLibrary();
+    const prompt = activePrompt();
+    const payload = {
+      format: 'minimax-h3-prompt',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      prompt: { name: prompt.name, state: clone(state) }
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob); const link = document.createElement('a');
+    link.href = url; link.download = `${safeFilename(prompt.name)}.json`;
+    document.body.append(link); link.click(); link.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    setLibraryStatus(`Exported “${prompt.name}” as a JSON file.`);
+  });
+  $('#import-prompt').addEventListener('click', () => $('#prompt-import-file').click());
+  $('#prompt-import-file').addEventListener('change', async event => {
+    const [file] = event.target.files;
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const payload = JSON.parse(await file.text());
+      if (payload?.format !== 'minimax-h3-prompt' || payload.version !== 1 || !payload.prompt || typeof payload.prompt.state !== 'object') throw new Error('Invalid format');
+      syncFormState(); saveLibrary();
+      const prompt = makePrompt(payload.prompt.name || 'Imported prompt', payload.prompt.state);
+      library.prompts.push(prompt); library.activePromptId = prompt.id; state = prompt.state;
+      saveLibrary(); renderAll();
+      setLibraryStatus(`Imported and loaded “${prompt.name}”.`);
+    } catch {
+      setLibraryStatus('Import failed. Choose a prompt JSON file exported by this app.');
+    }
   });
   $('#delete-prompt').addEventListener('click', () => {
     if (library.prompts.length === 1 || !confirm(`Delete “${activePrompt().name}”? This cannot be undone.`)) return;

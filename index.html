@@ -93,10 +93,13 @@
           <div class="buttons mb-0">
             <button class="button is-link is-light" id="new-prompt" type="button">New</button>
             <button class="button is-link is-light" id="duplicate-prompt" type="button">Duplicate</button>
+            <button class="button is-link is-light" id="export-prompt" type="button">Export</button>
+            <button class="button is-link is-light" id="import-prompt" type="button">Import</button>
             <button class="button is-danger is-light" id="delete-prompt" type="button">Delete</button>
           </div>
         </div>
-        <p class="help mt-2" id="prompt-library-status">Changes to the selected prompt save automatically in this browser.</p>
+        <input id="prompt-import-file" type="file" accept="application/json,.json" hidden>
+        <p class="help mt-2" id="prompt-library-status" aria-live="polite">Changes to the selected prompt save automatically in this browser.</p>
       </div>
     </div>
   </section>
