@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MiniMax H3 Prompt Generator</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css">
+  <style>
+    :root {
+      --ink: #f1f0fa;
+      --muted: #b5b2c7;
+      --surface: #171724;
+      --surface-raised: #202032;
+      --surface-subtle: #29283b;
+      --line: #3b3a52;
+      --accent: #a48bff;
+      --accent-strong: #7657f6;
+    }
+    html { color-scheme: dark; background: #10101a; }
+    body { min-height: 100vh; color: var(--ink); background: radial-gradient(circle at top left, #242044 0, #10101a 44rem); }
+    .hero { background: linear-gradient(120deg, #151526, #3c287f); border-bottom: 1px solid #4f4286; }
+    .hero .title, .hero .subtitle { color: #fff; }
+    .app-shell { max-width: 1500px; }
+    .prompt-manager { background: rgba(23, 23, 36, .92); }
+    .prompt-manager .field { min-width: min(100%, 15rem); }
+    .title, .label, .content, strong { color: var(--ink); }
+    .subtitle { color: var(--muted); }
+    .help { color: var(--muted); }
+    .help code { color: #d7cbff; background: #2a2840; }
+    .box, .card { background: var(--surface); color: var(--ink); box-shadow: 0 0.5em 1em -0.125em rgba(0, 0, 0, .35); }
+    .box { border: 1px solid var(--line); }
+    .card { border: 1px solid var(--line); }
+    .card-content { background: var(--surface-raised); }
+    .input, .textarea, .select select { color: var(--ink); background: #11111b; border-color: #4b4964; box-shadow: none; }
+    .input::placeholder, .textarea::placeholder { color: #807d96; opacity: 1; }
+    .input:focus, .textarea:focus, .select select:focus { border-color: var(--accent); box-shadow: 0 0 0 .125em rgba(164, 139, 255, .22); }
+    .select:not(.is-multiple):not(.is-loading)::after { border-color: var(--accent); }
+    .select select option { color: var(--ink); background: #1d1c2b; }
+    .checkbox { color: var(--muted); }
+    .checkbox input { accent-color: var(--accent-strong); }
+    .button { border-color: #55516f; background: #2b2a3d; color: var(--ink); }
+    .button:hover, .button:focus { border-color: var(--accent); color: #fff; }
+    .button.is-primary { background: var(--accent-strong); border-color: transparent; color: #fff; }
+    .button.is-primary:hover, .button.is-primary:focus { background: #8b70ff; }
+    .button.is-link.is-light { background: #30275b; border-color: #514686; color: #e7e1ff; }
+    .button.is-link.is-light:hover, .button.is-link.is-light:focus { background: #403478; color: #fff; }
+    .button.is-danger.is-light { background: #4a2638; border-color: #744052; color: #ffd9e4; }
+    .button.is-danger.is-light:hover, .button.is-danger.is-light:focus { background: #643048; color: #fff; }
+    .button[disabled] { opacity: .4; background: #252434; color: #9995ae; }
+    .delete { background-color: #565168; }
+    .delete:hover, .delete:focus { background-color: #d04d74; }
+    .notification.is-light, .has-background-light { background: var(--surface-subtle) !important; color: var(--muted); }
+    .sticky-output { position: sticky; top: 1rem; height: calc(100dvh - 2rem); display: flex; flex-direction: column; }
+    .editor-card { border-left: 4px solid var(--accent); }
+    .card + .card { margin-top: 1rem; }
+    .entry-title { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+    .entry-title h3 { margin: 0; }
+    .prompt-output { align-self: stretch; width: 100%; flex: 1 1 0; min-height: 0; margin: 0; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .83rem; line-height: 1.55; white-space: pre-wrap; }
+    .mode-only { display: none; }
+    .mode-only.is-visible { display: block; }
+    .prompt-output { padding: .25rem 0; background: transparent; color: #ebeaff; border: 0; }
+    .empty-list { padding: 1rem; color: var(--muted); border: 1px dashed #5a5773; border-radius: 6px; text-align: center; }
+    .section-heading { border-bottom: 1px solid var(--line); padding-bottom: .5rem; margin: 1.75rem 0 .85rem; }
+    .help code { white-space: nowrap; }
+    @media (max-width: 1023px) {
+      .sticky-output { position: static; height: auto; display: block; }
+      .prompt-output { min-height: 32rem; }
+    }
+  </style>
+</head>
+<body>
+  <section class="hero is-small">
+    <div class="hero-body">
+      <div class="container app-shell">
+        <h1 class="title">MiniMax H3 Prompt Generator</h1>
+        <p class="subtitle is-6">Compose structured audiovisual prompts for text, keyframe, and full-reference generation.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section pt-4 pb-0">
+    <div class="container app-shell">
+      <div class="box prompt-manager">
+        <div class="is-flex is-align-items-flex-end is-flex-wrap-wrap" style="gap: .75rem">
+          <div class="field is-flex-grow-1 mb-0">
+            <label class="label is-small" for="prompt-library">Saved prompts</label>
+            <div class="control select is-fullwidth"><select id="prompt-library" aria-label="Saved prompts"></select></div>
+          </div>
+          <div class="field is-flex-grow-1 mb-0">
+            <label class="label is-small" for="prompt-name">Prompt name</label>
+            <div class="control"><input class="input" id="prompt-name" type="text" maxlength="80" placeholder="Untitled prompt"></div>
+          </div>
+          <div class="buttons mb-0">
+            <button class="button is-link is-light" id="new-prompt" type="button">New</button>
+            <button class="button is-link is-light" id="duplicate-prompt" type="button">Duplicate</button>
+            <button class="button is-danger is-light" id="delete-prompt" type="button">Delete</button>
+          </div>
+        </div>
+        <p class="help mt-2" id="prompt-library-status">Changes to the selected prompt save automatically in this browser.</p>
+      </div>
+    </div>
+  </section>
+
+  <main class="section">
+    <div class="container app-shell">
+      <div class="columns is-variable is-5">
+        <div class="column is-7-desktop">
+          <div class="box">
+            <div class="field">
+              <label class="label" for="mode">Generation mode</label>
+              <div class="control select is-fullwidth">
+                <select id="mode">
+                  <option value="t2va">Text-to-video (T2VA)</option>
+                  <option value="i2va">First-frame reference (I2VA)</option>
+                  <option value="fl2va">First-and-last-frame reference (FL2VA)</option>
+                  <option value="l2va">Last-frame reference (L2VA)</option>
+                  <option value="full">Full-reference mode</option>
+                </select>
+              </div>
+              <p class="help" id="mode-help"></p>
+            </div>
+            <div class="field">
+              <label class="label" for="duration">Video duration (seconds)</label>
+              <div class="control"><input class="input" id="duration" type="number" min="0.01" step="0.01" value="8"></div>
+              <p class="help">Used by first/last-frame alignment instructions.</p>
+            </div>
+          </div>
+
+          <section id="keyframes-section" class="mode-only box">
+            <h2 class="title is-5">Picture references</h2>
+            <p class="help mb-4">Describe each reference image so you can use it consistently in the prompt. Asset files are not uploaded.</p>
+            <div id="keyframes"></div>
+          </section>
+
+          <section id="full-reference-section" class="mode-only">
+            <div class="box">
+              <h2 class="title is-5">Full-reference setup</h2>
+              <div class="field">
+                <label class="label">Task relationships</label>
+                <div id="task-types" class="control"></div>
+                <p class="help">Select every relationship that applies; they appear in the summary prefix.</p>
+              </div>
+              <div class="field"><label class="label" for="full-summary">Summary</label><div class="control"><textarea class="textarea" id="full-summary" rows="3" placeholder="Describe the target video, its shot flow, and its main reference relationships."></textarea></div></div>
+              <div class="field"><label class="label" for="full-style">Style opening</label><div class="control"><textarea class="textarea" id="full-style" rows="2" placeholder="Cinematic, literary music-video style with soft lighting…"></textarea></div><p class="help">One or two sentences placed before Shot 1 in <code>detailed_description</code>.</p></div>
+            </div>
+            <div id="reference-groups"></div>
+          </section>
+
+          <section class="box">
+            <div class="entry-title">
+              <div><h2 class="title is-5">Timeline</h2><p class="help">Add shots in playback order. First shot has no cut time.</p></div>
+              <button class="button is-link is-light" type="button" data-action="add-shot">Add shot</button>
+            </div>
+            <div id="shots" class="mt-4"></div>
+          </section>
+
+          <section class="box">
+            <h2 class="title is-5">Global audio</h2>
+            <div class="field"><label class="label" for="soundscape">Overall soundscape</label><div class="control"><textarea class="textarea" id="soundscape" rows="3" placeholder="Ambience, physical action sounds, and non-verbal human sounds across the full video."></textarea></div></div>
+            <div class="field mb-0"><label class="label" for="music">Non-diegetic music</label><div class="control"><textarea class="textarea" id="music" rows="3" placeholder="Audience-only score: instrumentation, tempo, rhythm, and dynamic development. Use N/A if absent."></textarea></div></div>
+          </section>
+          <div class="buttons is-right"><button class="button is-danger is-light" type="button" id="reset">Reset draft</button></div>
+        </div>
+
+        <aside class="column is-5-desktop">
+          <div class="sticky-output box">
+            <div class="entry-title mb-3"><div><h2 class="title is-5 mb-1">Generated prompt</h2><p class="help">Updates as you edit.</p></div><button class="button is-primary" type="button" id="copy">Copy prompt</button></div>
+            <pre class="prompt-output" id="output" aria-label="Generated MiniMax H3 prompt"></pre>
+            <p class="help mt-2" id="copy-status" aria-live="polite"></p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
