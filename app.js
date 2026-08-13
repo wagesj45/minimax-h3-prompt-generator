@@ -69,6 +69,29 @@
     video: { title: 'Videos', label: 'Video', placeholder: 'The source video for the target video edit.', relations: ['fully_preserved','partially_preserved','attribute_transfer','weak_reference'] },
     audio: { title: 'Audio', label: 'Audio', placeholder: 'The voice-timbre reference for Subject 1 (S1).', relations: ['fully_copy','partially_copy','reference','weak_reference'] }
   };
+  // Values remain the original UI labels so previously saved prompts render unchanged.
+  const cameraConfig = {
+    'Zoom In': { sentence: 'The camera zooms in', supportsModifiers: true },
+    'Zoom Out': { sentence: 'The camera zooms out', supportsModifiers: true },
+    'Push In': { sentence: 'The camera pushes in', supportsModifiers: true },
+    'Pull Out': { sentence: 'The camera pulls out', supportsModifiers: true },
+    'Pan Left': { sentence: 'The camera pans left', supportsModifiers: true },
+    'Pan Right': { sentence: 'The camera pans right', supportsModifiers: true },
+    'Truck Left': { sentence: 'The camera trucks left', supportsModifiers: true },
+    'Truck Right': { sentence: 'The camera trucks right', supportsModifiers: true },
+    'Tilt Up': { sentence: 'The camera tilts up', supportsModifiers: true },
+    'Tilt Down': { sentence: 'The camera tilts down', supportsModifiers: true },
+    'Pedestal Up': { sentence: 'The camera rises vertically', supportsModifiers: true },
+    'Pedestal Down': { sentence: 'The camera lowers vertically', supportsModifiers: true },
+    'Arc Shot': { sentence: 'The camera moves in an arc', supportsModifiers: true },
+    'Tracking Shot': { sentence: 'The camera tracks the action', supportsModifiers: true },
+    'Static Shot': { sentence: 'The camera remains locked off', supportsModifiers: false },
+    'Shake Slightly': { sentence: 'The camera shakes slightly', supportsModifiers: false },
+    'Shake Strongly': { sentence: 'The camera shakes violently', supportsModifiers: false },
+    'POV': { sentence: 'The shot is presented from a first-person point of view', supportsModifiers: false },
+    'Roll Clockwise': { sentence: 'The camera rolls clockwise', supportsModifiers: true },
+    'Roll Counterclockwise': { sentence: 'The camera rolls counterclockwise', supportsModifiers: true }
+  };
 
   function syncFormState() {
     state.mode = $('#mode').value; state.duration = $('#duration').value; state.soundscape = $('#soundscape').value; state.music = $('#music').value;
@@ -125,8 +148,8 @@
   }
   function shotCard(shot, index) {
     const selectOptions = (items, none = 'Not specified') => [{ value: '', label: none }, ...items.map(v => ({ value: v, label: v }))];
-    const cameras = ['Zoom In','Zoom Out','Push In','Pull Out','Pan Left','Pan Right','Truck Left','Truck Right','Tilt Up','Tilt Down','Pedestal Up','Pedestal Down','Arc Shot','Tracking Shot','Static Shot','Shake Slightly','Shake Strongly','POV','Roll Clockwise','Roll Counterclockwise'];
-    return `<article class="card editor-card" data-shot-id="${shot.id}"><div class="card-content"><div class="entry-title"><h3 class="title is-5">Shot ${index + 1}</h3><div class="buttons are-small"><button class="button" type="button" data-action="move-shot" data-id="${shot.id}" data-direction="-1" ${index === 0 ? 'disabled' : ''}>↑</button><button class="button" type="button" data-action="move-shot" data-id="${shot.id}" data-direction="1" ${index === state.shots.length - 1 ? 'disabled' : ''}>↓</button><button class="button is-danger is-light" type="button" data-action="remove-shot" data-id="${shot.id}">Remove</button></div></div><div class="columns is-multiline"><div class="column is-4">${index ? field('Cut time', 'cutTime', shot.cutTime, { type: 'input', attrs: 'data-shot-field="cutTime" placeholder="00:03.500"' }) : '<div class="notification is-light is-size-7">Opening shot: no timestamp.</div>'}</div><div class="column is-8">${field('Style and initial composition', 'styleComposition', shot.styleComposition, { rows: 3, attrs: 'data-shot-field="styleComposition"', help: 'For Shot 1, establish style and composition. In full-reference mode, cite labels naturally.' })}</div><div class="column is-12">${field('Action, reaction, and progression', 'action', shot.action, { rows: 3, attrs: 'data-shot-field="action"' })}</div><div class="column is-4">${field('Camera movement', 'cameraType', shot.cameraType, { type: 'select', options: selectOptions(cameras), attrs: 'data-shot-field="cameraType"' })}</div><div class="column is-4">${field('Amplitude', 'amplitude', shot.amplitude, { type: 'select', options: selectOptions(['with small amplitude','with large amplitude']), attrs: 'data-shot-field="amplitude"' })}</div><div class="column is-4">${field('Speed', 'speed', shot.speed, { type: 'select', options: selectOptions(['at slow speed','at fast speed']), attrs: 'data-shot-field="speed"' })}</div><div class="column is-12">${field('Additional shot detail', 'detail', shot.detail, { rows: 2, attrs: 'data-shot-field="detail"', help: 'Optional: transitions, continuity, reference labels, or any special visual direction.' })}</div></div>${nestedList('Dialogue & singing', 'dialogue', shot.dialogues, shot.id)}${nestedList('Visible on-screen text', 'text', shot.texts, shot.id)}${nestedList('Diegetic sound events', 'sound', shot.sounds, shot.id)}</div></article>`;
+    const cameras = Object.keys(cameraConfig);
+    return `<article class="card editor-card" data-shot-id="${shot.id}"><div class="card-content"><div class="entry-title"><h3 class="title is-5">Shot ${index + 1}</h3><div class="buttons are-small"><button class="button" type="button" data-action="move-shot" data-id="${shot.id}" data-direction="-1" ${index === 0 ? 'disabled' : ''}>↑</button><button class="button" type="button" data-action="move-shot" data-id="${shot.id}" data-direction="1" ${index === state.shots.length - 1 ? 'disabled' : ''}>↓</button><button class="button is-danger is-light" type="button" data-action="remove-shot" data-id="${shot.id}">Remove</button></div></div><div class="columns is-multiline"><div class="column is-4">${index ? field('Cut time', 'cutTime', shot.cutTime, { type: 'input', attrs: 'data-shot-field="cutTime" placeholder="00:03.500"' }) : '<div class="notification is-light is-size-7">Opening shot: no timestamp.</div>'}</div><div class="column is-8">${field('Style and initial composition', 'styleComposition', shot.styleComposition, { rows: 3, attrs: 'data-shot-field="styleComposition"', help: 'For Shot 1, establish style and composition. In full-reference mode, cite labels naturally.' })}</div><div class="column is-12">${field('Action, reaction, and progression', 'action', shot.action, { rows: 3, attrs: 'data-shot-field="action"' })}</div><div class="column is-4">${field('Camera movement', 'cameraType', shot.cameraType, { type: 'select', options: selectOptions(cameras), attrs: 'data-shot-field="cameraType"' })}</div><div class="column is-4">${field('Amplitude', 'amplitude', shot.amplitude, { type: 'select', options: selectOptions(['with small amplitude','with large amplitude']), attrs: 'data-shot-field="amplitude"', help: 'Used only for moving-camera choices.' })}</div><div class="column is-4">${field('Speed', 'speed', shot.speed, { type: 'select', options: selectOptions(['at slow speed','at fast speed']), attrs: 'data-shot-field="speed"', help: 'Used only for moving-camera choices.' })}</div><div class="column is-12">${field('Additional shot detail', 'detail', shot.detail, { rows: 2, attrs: 'data-shot-field="detail"', help: 'Optional: transitions, continuity, reference labels, or any special visual direction.' })}</div></div>${nestedList('Dialogue & singing', 'dialogue', shot.dialogues, shot.id)}${nestedList('Visible on-screen text', 'text', shot.texts, shot.id)}${nestedList('Diegetic sound events', 'sound', shot.sounds, shot.id)}</div></article>`;
   }
   function nestedList(title, type, items, shotId) {
     const label = type === 'dialogue' ? 'Add dialogue' : type === 'text' ? 'Add visible text' : 'Add sound event';
@@ -135,23 +158,36 @@
   function nestedCard(type, item, shotId) {
     let body;
     if (type === 'dialogue') body = `<div class="columns is-multiline"><div class="column is-6">${field('Speaker identity', 'identity', item.identity || '', { type: 'input', attrs: 'data-nested-field="identity" placeholder="Young woman with a quiet, breathy voice"' })}</div><div class="column is-3">${field('Speaker ID', 'speaker', item.speaker || 'S1', { type: 'input', attrs: 'data-nested-field="speaker" placeholder="S1"' })}</div><div class="column is-3">${field('Delivery', 'delivery', item.delivery || 'says', { type: 'input', attrs: 'data-nested-field="delivery" placeholder="says"' })}</div><div class="column is-4">${field('Language', 'language', item.language || 'English', { type: 'input', attrs: 'data-nested-field="language"' })}</div><div class="column is-8">${field('Exact dialogue or lyrics', 'words', item.words || '', { rows: 2, attrs: 'data-nested-field="words"' })}</div><div class="column is-12"><label class="checkbox mr-4"><input type="checkbox" data-nested-field="voiceover" ${item.voiceover ? 'checked' : ''}> Off-screen voiceover</label><label class="checkbox mr-4"><input type="checkbox" data-nested-field="acrossCut" ${item.acrossCut ? 'checked' : ''}> Continues across cut</label><label class="checkbox"><input type="checkbox" data-nested-field="cutoff" ${item.cutoff ? 'checked' : ''}> Cut off at video end</label></div></div>`;
-    else if (type === 'text') body = `<div class="columns"><div class="column is-5">${field('Visible text', 'content', item.content || '', { type: 'input', attrs: 'data-nested-field="content"' })}</div><div class="column is-7">${field('Placement / appearance', 'detail', item.detail || '', { type: 'input', attrs: 'data-nested-field="detail" placeholder="A red neon sign above the doorway"' })}</div></div>`;
+    else if (type === 'text') body = `<div class="columns"><div class="column is-5">${field('Visible text', 'content', item.content || '', { type: 'input', attrs: 'data-nested-field="content"' })}</div><div class="column is-7">${field('Appearance / placement', 'detail', item.detail || '', { type: 'input', attrs: 'data-nested-field="detail" placeholder="as a red neon sign above the doorway"', help: 'Begin with “as,” “in,” “at,” or another placement phrase.' })}</div></div>`;
     else body = field('Sound event', 'content', item.content || '', { rows: 2, attrs: 'data-nested-field="content"', help: 'Sound the characters can hear; do not repeat global ambience.' });
     return `<div class="box is-shadowless has-background-light mb-3" data-nested-id="${item.id}" data-shot-id="${shotId}" data-type="${type}"><button class="delete is-pulled-right" type="button" aria-label="Remove ${type}" data-action="remove-nested" data-shot-id="${shotId}" data-type="${type}" data-id="${item.id}"></button>${body}</div>`;
   }
   function sentence(text) { const t = String(text || '').trim(); return t ? (/[.!?]$/.test(t) ? t : `${t}.`) : ''; }
-  function cameraText(shot) { return [shot.cameraType, shot.amplitude, shot.speed].filter(Boolean).join(' '); }
-  function dialogueText(item) { if (!item.words?.trim()) return ''; const source = `${item.identity || 'The speaker'} (${item.speaker || 'S1'}) ${item.voiceover ? 'says in an off-screen voiceover' : (item.delivery || 'says')}: <d>[${item.language || 'English'}] ${item.words.trim()}${item.cutoff ? ' <cutoff>' : ''}</d>`; return `${source}${item.voiceover ? ' while their lips remain completely closed' : ''}${item.acrossCut ? '; the audio continues seamlessly across the cut' : ''}.`; }
+  function cameraText(shot) {
+    const camera = cameraConfig[shot.cameraType];
+    if (!camera) return '';
+    if (!camera.supportsModifiers) return camera.sentence;
+    const speed = shot.speed === 'at slow speed' ? 'slowly ' : shot.speed === 'at fast speed' ? 'quickly ' : '';
+    const amplitude = shot.amplitude === 'with small amplitude' ? ' with a subtle range of movement' : shot.amplitude === 'with large amplitude' ? ' with a broad range of movement' : '';
+    return camera.sentence.replace('The camera ', `The camera ${speed}`) + amplitude;
+  }
+  function visibleTextText(item) {
+    if (!item.content?.trim()) return '';
+    const detail = item.detail?.trim();
+    const placement = detail ? (/^(as|in|on|at|with|against|beside|above|below|near|within|over|under)\b/i.test(detail) ? ` ${detail}` : ` as ${detail.charAt(0).toLowerCase()}${detail.slice(1)}`) : '';
+    return `The on-screen text reads "${item.content.trim()}"${placement}`;
+  }
+  function dialogueText(item) { if (!item.words?.trim()) return ''; const delivery = item.delivery?.trim() || 'says'; const source = `${item.identity || 'The speaker'} (${item.speaker || 'S1'}) ${delivery}${item.voiceover ? ' in an off-screen voiceover' : ''}: <d>[${item.language || 'English'}] ${item.words.trim()}${item.cutoff ? ' <cutoff>' : ''}</d>`; return `${source}${item.voiceover ? ' while no visible lips move' : ''}${item.acrossCut ? '; the audio continues seamlessly across the cut' : ''}.`; }
   function shotText(shot, index, full) {
-    const prefix = index === 0 ? '[Shot 1]' : `[Shot ${index + 1}] At ${shot.cutTime?.trim() || '00:00.000'}, the camera cuts to`;
+    const prefix = index === 0 ? '[Shot 1]' : `[Shot ${index + 1}] At ${shot.cutTime?.trim() || '00:00.000'}, the shot changes.`;
     const pieces = [shot.styleComposition, shot.action];
-    const cam = cameraText(shot); if (cam) pieces.push(`The camera ${cam.toLowerCase()}`);
+    const cam = cameraText(shot); if (cam) pieces.push(cam);
     if (shot.detail) pieces.push(shot.detail);
-    shot.texts.forEach(item => { if (item.content) pieces.push(`${item.detail || 'Visible text'} reading "${item.content}"`); });
+    shot.texts.forEach(item => pieces.push(visibleTextText(item)));
     shot.dialogues.forEach(item => pieces.push(dialogueText(item)));
     shot.sounds.forEach(item => { if (item.content) pieces.push(item.content); });
     const content = pieces.filter(Boolean).map(sentence).join(' ');
-    return `${prefix}${content ? ` ${content}` : ''}`.trim();
+    return [prefix, content].filter(Boolean).join(' ').trim();
   }
   function alignmentInstruction() {
     const duration = Number(state.duration || 0).toFixed(2); const last = state.shots.length || 1;
@@ -166,7 +202,7 @@
     return [instruction, `integrated_multimodal_description: ${body || '[Shot 1] '}`, `overall_soundscape: ${state.soundscape.trim() || 'N/A'}`, `non_diegetic_music: ${state.music.trim() || 'N/A'}`].filter((line, i) => line || i > 0).join('\n\n');
   }
   function generateFull() {
-    const definitionLines = Object.entries(refConfig).flatMap(([kind, config]) => state.refs[kind].map((entry, index) => `<${config.label} ${index + 1}> is ${entry.definition?.trim() || '[describe this reference]'}`));
+    const definitionLines = Object.entries(refConfig).flatMap(([kind, config]) => state.refs[kind].map((entry, index) => `<${config.label} ${index + 1}>: ${entry.definition?.trim() || '[describe this reference]'}`));
     const retention = Object.entries(refConfig).flatMap(([kind, config]) => state.refs[kind].map((entry, index) => `<${config.label} ${index + 1}>${entry.appears?.trim() ? ` (${entry.appears.trim()})` : ''}: ${entry.relationship || config.relations[0]}${entry.retention?.trim() ? ` - ${entry.retention.trim()}` : ''}`));
     const detail = [state.fullStyle.trim(), state.shots.map((shot, index) => shotText(shot, index, true)).join(' ')].filter(Boolean).join('\n');
     const prefix = state.taskTypes.length ? `[${state.taskTypes.join(' + ')}] ` : '';
