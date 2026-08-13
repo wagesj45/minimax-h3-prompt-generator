@@ -11,7 +11,8 @@
       ? `<div class="select is-fullwidth"><select data-key="${key}" ${attrs}>${options.options.map(o => `<option value="${esc(o.value)}" ${o.value === value ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></div>`
       : type === 'input' ? `<input class="input" data-key="${key}" value="${esc(value)}" ${attrs}>`
       : `<textarea class="textarea" data-key="${key}" rows="${options.rows || 2}" ${attrs}>${esc(value)}</textarea>`;
-    return `<div class="field"><label class="label is-small">${label}</label><div class="control">${control}</div>${options.help ? `<p class="help">${options.help}</p>` : ''}</div>`;
+    const builder = options.builder ? `<button class="button is-small is-link is-light mt-2" type="button" data-builder-kind="${options.builder}" data-builder-key="${key}">Build…</button>` : '';
+    return `<div class="field"><label class="label is-small">${label}</label><div class="control">${control}</div>${builder}${options.help ? `<p class="help">${options.help}</p>` : ''}</div>`;
   };
   const defaultComposer = () => ({
     composition: { open: false, style: '', styleDetail: '', framing: '', subject: '', environment: '', lighting: '', reference: '' },
@@ -142,7 +143,7 @@
   function renderKeyframes() {
     const needed = state.mode === 'fl2va' ? 2 : 1;
     while (state.keyframes.length < needed) state.keyframes.push({ id: uid(), description: '' });
-    $('#keyframes').innerHTML = state.keyframes.slice(0, needed).map((frame, i) => `<article class="card editor-card"><div class="card-content"><div class="entry-title"><h3 class="title is-6">Picture ${i + 1}</h3></div>${field('Reference description', 'description', frame.description, { help: i === 0 ? 'Use this label in the timeline when it anchors a shot.' : 'This is the ending reference image.' })}</div></article>`).join('');
+    $('#keyframes').innerHTML = state.keyframes.slice(0, needed).map((frame, i) => `<article class="card editor-card" data-keyframe-index="${i}"><div class="card-content"><div class="entry-title"><h3 class="title is-6">Picture ${i + 1}</h3></div>${field('Reference description', 'description', frame.description, { builder: 'reference', help: i === 0 ? 'Use this label in the timeline when it anchors a shot.' : 'This is the ending reference image.' })}</div></article>`).join('');
   }
   function renderReferenceGroups() {
     $('#reference-groups').innerHTML = Object.entries(refConfig).map(([kind, config]) => {
@@ -153,68 +154,15 @@
   function referenceCard(kind, item, index) {
     const config = refConfig[kind];
     const relOptions = config.relations.map(value => ({ value, label: value }));
-    return `<article class="card editor-card mb-4" data-ref-id="${item.id}" data-kind="${kind}"><div class="card-content"><div class="entry-title"><h3 class="title is-6">&lt;${config.label} ${index + 1}&gt;</h3><button class="button is-small is-danger is-light" type="button" data-action="remove-ref" data-kind="${kind}" data-id="${item.id}">Remove</button></div>${field('Definition', 'definition', item.definition || '', { rows: 2, attrs: `data-ref-field="definition"`, help: config.placeholder })}${field('Where it appears / applies', 'appears', item.appears || '', { type: 'input', attrs: 'data-ref-field="appears"', help: 'Example: [Shot 1], [Shot 3], or cut and pacing structure.' })}${field('Retention relationship', 'relationship', item.relationship || config.relations[0], { type: 'select', options: relOptions, attrs: 'data-ref-field="relationship"' })}${field('Retention detail', 'retention', item.retention || '', { rows: 2, attrs: 'data-ref-field="retention"', help: 'State how the referenced content is preserved, copied, transferred, or used.' })}</div></article>`;
+    return `<article class="card editor-card mb-4" data-ref-id="${item.id}" data-kind="${kind}"><div class="card-content"><div class="entry-title"><h3 class="title is-6">&lt;${config.label} ${index + 1}&gt;</h3><button class="button is-small is-danger is-light" type="button" data-action="remove-ref" data-kind="${kind}" data-id="${item.id}">Remove</button></div>${field('Definition', 'definition', item.definition || '', { rows: 2, attrs: `data-ref-field="definition"`, builder: 'reference', help: config.placeholder })}${field('Where it appears / applies', 'appears', item.appears || '', { type: 'input', attrs: 'data-ref-field="appears"', builder: 'reference' })}${field('Retention relationship', 'relationship', item.relationship || config.relations[0], { type: 'select', options: relOptions, attrs: 'data-ref-field="relationship"' })}${field('Retention detail', 'retention', item.retention || '', { rows: 2, attrs: 'data-ref-field="retention"', builder: 'retention', help: 'State how the referenced content is preserved, copied, transferred, or used.' })}</div></article>`;
   }
   function renderShots() {
     $('#shots').innerHTML = state.shots.length ? state.shots.map((shot, index) => shotCard(shot, index)).join('') : '<div class="empty-list">No shots. Add a shot to begin the timeline.</div>';
   }
-  const composerOptions = {
-    styles: ['Live-action, cinematic', '2D-animated', '3D CG', 'Claymation', 'Watercolor', 'Vintage film'],
-    framings: ['extreme-wide shot', 'wide shot', 'medium-wide shot', 'medium shot', 'close-up', 'extreme close-up']
-  };
-  function options(items, selected, empty = 'Not specified') {
-    return [{ value: '', label: empty }, ...items.map(value => ({ value, label: value }))];
-  }
-  function referenceOptions() {
-    if (state.mode === 'full') return Object.entries(refConfig).flatMap(([kind, config]) => state.refs[kind].map((_, index) => `<${config.label} ${index + 1}>`));
-    if (state.mode === 'fl2va') return ['<Picture 1>', '<Picture 2>'];
-    if (['i2va', 'l2va'].includes(state.mode)) return ['<Picture 1>'];
-    return [];
-  }
-  function compositionDraft(shot) {
-    const data = shot.composer.composition;
-    const parts = [];
-    if (data.style || data.styleDetail) parts.push([data.style, data.styleDetail].filter(Boolean).join(', '));
-    if (data.framing) parts.push(`a ${data.framing} frames`);
-    if (data.subject) parts.push(data.subject);
-    if (data.environment) parts.push(`in ${data.environment}`);
-    if (data.lighting) parts.push(`under ${data.lighting}`);
-    const body = parts.join(', ');
-    if (!body) return '';
-    if (state.mode === 'i2va') return `The shot begins from <Picture 1>, preserving its established composition. ${body}`;
-    if (state.mode === 'fl2va') return `The shot begins from <Picture 1>. ${body}; the composition will develop continuously toward <Picture 2>`;
-    if (state.mode === 'l2va') return `${body}; the composition gradually converges on <Picture 1> as the final frame`;
-    if (data.reference) return `${data.reference} appears naturally in the shot. ${body}`;
-    return body;
-  }
-  function actionDraft(shot) {
-    const data = shot.composer.action;
-    if (!data.subject || !data.action) return '';
-    const start = data.initial ? `Starting from ${data.initial}, ` : '';
-    const target = data.target ? ` ${data.target}` : '';
-    const result = data.result ? ` ${data.result}` : '';
-    const ending = data.ending ? ` By the end of the shot, ${data.ending}` : '';
-    const body = `${start}${data.subject} ${data.action}${target}.${result}${ending}`.trim();
-    if (state.mode === 'i2va') return `The action develops forward from <Picture 1>: ${body}`;
-    if (state.mode === 'fl2va') return `The action continuously carries the scene from <Picture 1> toward <Picture 2>: ${body}`;
-    if (state.mode === 'l2va') return `From a plausible preceding state, ${body} The final movement lands on <Picture 1>.`;
-    return body;
-  }
-  function compositionComposer(shot) {
-    const data = shot.composer.composition; const draft = compositionDraft(shot);
-    const references = referenceOptions();
-    const warning = !(data.style || data.styleDetail) || !data.framing || !data.subject ? 'For a stronger opening, include style, framing, and the subject’s position or appearance.' : '';
-    return `<details class="composer" ${data.open ? 'open' : ''} data-composer-toggle="composition"><summary>Build composition</summary><div class="columns is-multiline"><div class="column is-4">${field('Style preset', 'style', data.style, { type: 'select', options: options(composerOptions.styles, data.style), attrs: 'data-composer-field="style" data-composer-section="composition"' })}</div><div class="column is-4">${field('Custom style detail', 'styleDetail', data.styleDetail, { type: 'input', attrs: 'data-composer-field="styleDetail" data-composer-section="composition"', help: 'Optional: grain, palette, or rendering detail' })}</div><div class="column is-4">${field('Framing preset', 'framing', data.framing, { type: 'select', options: options(composerOptions.framings, data.framing), attrs: 'data-composer-field="framing" data-composer-section="composition"' })}</div>${references.length ? `<div class="column is-4">${field('Reference anchor', 'reference', data.reference, { type: 'select', options: options(references, data.reference), attrs: 'data-composer-field="reference" data-composer-section="composition"' })}</div>` : ''}<div class="column is-6">${field('Subject, appearance, and position', 'subject', data.subject, { type: 'input', attrs: 'data-composer-field="subject" data-composer-section="composition"', help: 'Example: the woman in a blue cardigan sits at the left side of the frame' })}</div><div class="column is-3">${field('Environment / key props', 'environment', data.environment, { type: 'input', attrs: 'data-composer-field="environment" data-composer-section="composition"' })}</div><div class="column is-3">${field('Lighting', 'lighting', data.lighting, { type: 'input', attrs: 'data-composer-field="lighting" data-composer-section="composition"' })}</div></div><p class="help composer-warning">${warning}</p><p class="composer-preview" data-composer-preview="composition">${esc(draft || 'Fill in the fields above to preview a composition draft.')}</p><div class="buttons is-right mt-3 mb-0"><button class="button is-small is-link is-light" type="button" data-action="apply-composer" data-section="composition" data-shot-id="${shot.id}" ${draft ? '' : 'disabled'}>Apply draft</button></div></details>`;
-  }
-  function actionComposer(shot) {
-    const data = shot.composer.action; const draft = actionDraft(shot);
-    const warning = !data.subject || !data.action ? 'Add an acting subject and an observable action. Include a result or end state when the shot changes over time.' : '';
-    return `<details class="composer" ${data.open ? 'open' : ''} data-composer-toggle="action"><summary>Build action progression</summary><div class="columns is-multiline"><div class="column is-4">${field('Initial state', 'initial', data.initial, { type: 'input', attrs: 'data-composer-field="initial" data-composer-section="action"' })}</div><div class="column is-4">${field('Acting subject', 'subject', data.subject, { type: 'input', attrs: 'data-composer-field="subject" data-composer-section="action"' })}</div><div class="column is-4">${field('Observable action', 'action', data.action, { type: 'input', attrs: 'data-composer-field="action" data-composer-section="action"', help: 'Example: reaches, turns, lifts, runs, or folds' })}</div><div class="column is-4">${field('Object / target', 'target', data.target, { type: 'input', attrs: 'data-composer-field="target" data-composer-section="action"' })}</div><div class="column is-4">${field('Reaction / result', 'result', data.result, { type: 'input', attrs: 'data-composer-field="result" data-composer-section="action"' })}</div><div class="column is-4">${field('End state', 'ending', data.ending, { type: 'input', attrs: 'data-composer-field="ending" data-composer-section="action"' })}</div></div><p class="help composer-warning">${warning}</p><p class="composer-preview" data-composer-preview="action">${esc(draft || 'Add an acting subject and action to preview a progression draft.')}</p><div class="buttons is-right mt-3 mb-0"><button class="button is-small is-link is-light" type="button" data-action="apply-composer" data-section="action" data-shot-id="${shot.id}" ${draft ? '' : 'disabled'}>Apply draft</button></div></details>`;
-  }
   function shotCard(shot, index) {
     const selectOptions = (items, none = 'Not specified') => [{ value: '', label: none }, ...items.map(v => ({ value: v, label: v }))];
     const cameras = Object.keys(cameraConfig);
-    return `<article class="card editor-card" data-shot-id="${shot.id}"><div class="card-content"><div class="entry-title"><h3 class="title is-5">Shot ${index + 1}</h3><div class="buttons are-small"><button class="button" type="button" data-action="move-shot" data-id="${shot.id}" data-direction="-1" ${index === 0 ? 'disabled' : ''}>↑</button><button class="button" type="button" data-action="move-shot" data-id="${shot.id}" data-direction="1" ${index === state.shots.length - 1 ? 'disabled' : ''}>↓</button><button class="button is-danger is-light" type="button" data-action="remove-shot" data-id="${shot.id}">Remove</button></div></div><div class="columns is-multiline"><div class="column is-4">${index ? field('Cut time', 'cutTime', shot.cutTime, { type: 'input', attrs: 'data-shot-field="cutTime" placeholder="00:03.500"' }) : '<div class="notification is-light is-size-7">Opening shot: no timestamp.</div>'}</div><div class="column is-8">${field('Style and initial composition', 'styleComposition', shot.styleComposition, { rows: 3, attrs: 'data-shot-field="styleComposition"', help: 'For Shot 1, establish style and composition. In full-reference mode, cite labels naturally.' })}${compositionComposer(shot)}</div><div class="column is-12">${field('Action, reaction, and progression', 'action', shot.action, { rows: 3, attrs: 'data-shot-field="action"' })}${actionComposer(shot)}</div><div class="column is-4">${field('Camera movement', 'cameraType', shot.cameraType, { type: 'select', options: selectOptions(cameras), attrs: 'data-shot-field="cameraType"' })}</div><div class="column is-4">${field('Amplitude', 'amplitude', shot.amplitude, { type: 'select', options: selectOptions(['with small amplitude','with large amplitude']), attrs: 'data-shot-field="amplitude"', help: 'Used only for moving-camera choices.' })}</div><div class="column is-4">${field('Speed', 'speed', shot.speed, { type: 'select', options: selectOptions(['at slow speed','at fast speed']), attrs: 'data-shot-field="speed"', help: 'Used only for moving-camera choices.' })}</div><div class="column is-12">${field('Additional shot detail', 'detail', shot.detail, { rows: 2, attrs: 'data-shot-field="detail"', help: 'Optional: transitions, continuity, reference labels, or any special visual direction.' })}</div></div>${nestedList('Dialogue & singing', 'dialogue', shot.dialogues, shot.id)}${nestedList('Visible on-screen text', 'text', shot.texts, shot.id)}${nestedList('Diegetic sound events', 'sound', shot.sounds, shot.id)}</div></article>`;
+    return `<article class="card editor-card" data-shot-id="${shot.id}"><div class="card-content"><div class="entry-title"><h3 class="title is-5">Shot ${index + 1}</h3><div class="buttons are-small"><button class="button" type="button" data-action="move-shot" data-id="${shot.id}" data-direction="-1" ${index === 0 ? 'disabled' : ''}>↑</button><button class="button" type="button" data-action="move-shot" data-id="${shot.id}" data-direction="1" ${index === state.shots.length - 1 ? 'disabled' : ''}>↓</button><button class="button is-danger is-light" type="button" data-action="remove-shot" data-id="${shot.id}">Remove</button></div></div><div class="columns is-multiline"><div class="column is-4">${index ? field('Cut time', 'cutTime', shot.cutTime, { type: 'input', attrs: 'data-shot-field="cutTime" placeholder="00:03.500"' }) : '<div class="notification is-light is-size-7">Opening shot: no timestamp.</div>'}</div><div class="column is-8">${field('Style and initial composition', 'styleComposition', shot.styleComposition, { rows: 3, attrs: 'data-shot-field="styleComposition"', builder: 'composition', help: 'For Shot 1, establish style and composition. In full-reference mode, cite labels naturally.' })}</div><div class="column is-12">${field('Action, reaction, and progression', 'action', shot.action, { rows: 3, attrs: 'data-shot-field="action"', builder: 'action' })}</div><div class="column is-4">${field('Camera movement', 'cameraType', shot.cameraType, { type: 'select', options: selectOptions(cameras), attrs: 'data-shot-field="cameraType"' })}</div><div class="column is-4">${field('Amplitude', 'amplitude', shot.amplitude, { type: 'select', options: selectOptions(['with small amplitude','with large amplitude']), attrs: 'data-shot-field="amplitude"', help: 'Used only for moving-camera choices.' })}</div><div class="column is-4">${field('Speed', 'speed', shot.speed, { type: 'select', options: selectOptions(['at slow speed','at fast speed']), attrs: 'data-shot-field="speed"', help: 'Used only for moving-camera choices.' })}</div><div class="column is-12">${field('Additional shot detail', 'detail', shot.detail, { rows: 2, attrs: 'data-shot-field="detail"', builder: 'detail', help: 'Optional: transitions, continuity, reference labels, or any special visual direction.' })}</div></div>${nestedList('Dialogue & singing', 'dialogue', shot.dialogues, shot.id)}${nestedList('Visible on-screen text', 'text', shot.texts, shot.id)}${nestedList('Diegetic sound events', 'sound', shot.sounds, shot.id)}</div></article>`;
   }
   function nestedList(title, type, items, shotId) {
     const label = type === 'dialogue' ? 'Add dialogue' : type === 'text' ? 'Add visible text' : 'Add sound event';
@@ -222,9 +170,9 @@
   }
   function nestedCard(type, item, shotId) {
     let body;
-    if (type === 'dialogue') body = `<div class="columns is-multiline"><div class="column is-6">${field('Speaker identity', 'identity', item.identity || '', { type: 'input', attrs: 'data-nested-field="identity" placeholder="Young woman with a quiet, breathy voice"' })}</div><div class="column is-3">${field('Speaker ID', 'speaker', item.speaker || 'S1', { type: 'input', attrs: 'data-nested-field="speaker" placeholder="S1"' })}</div><div class="column is-3">${field('Delivery', 'delivery', item.delivery || 'says', { type: 'input', attrs: 'data-nested-field="delivery" placeholder="says"' })}</div><div class="column is-4">${field('Language', 'language', item.language || 'English', { type: 'input', attrs: 'data-nested-field="language"' })}</div><div class="column is-8">${field('Exact dialogue or lyrics', 'words', item.words || '', { rows: 2, attrs: 'data-nested-field="words"' })}</div><div class="column is-12"><label class="checkbox mr-4"><input type="checkbox" data-nested-field="voiceover" ${item.voiceover ? 'checked' : ''}> Off-screen voiceover</label><label class="checkbox mr-4"><input type="checkbox" data-nested-field="acrossCut" ${item.acrossCut ? 'checked' : ''}> Continues across cut</label><label class="checkbox"><input type="checkbox" data-nested-field="cutoff" ${item.cutoff ? 'checked' : ''}> Cut off at video end</label></div></div>`;
-    else if (type === 'text') body = `<div class="columns"><div class="column is-5">${field('Visible text', 'content', item.content || '', { type: 'input', attrs: 'data-nested-field="content"' })}</div><div class="column is-7">${field('Appearance / placement', 'detail', item.detail || '', { type: 'input', attrs: 'data-nested-field="detail" placeholder="as a red neon sign above the doorway"', help: 'Begin with “as,” “in,” “at,” or another placement phrase.' })}</div></div>`;
-    else body = field('Sound event', 'content', item.content || '', { rows: 2, attrs: 'data-nested-field="content"', help: 'Sound the characters can hear; do not repeat global ambience.' });
+    if (type === 'dialogue') body = `<div class="columns is-multiline"><div class="column is-6">${field('Speaker identity', 'identity', item.identity || '', { type: 'input', attrs: 'data-nested-field="identity" placeholder="Young woman with a quiet, breathy voice"' })}</div><div class="column is-3">${field('Speaker ID', 'speaker', item.speaker || 'S1', { type: 'input', attrs: 'data-nested-field="speaker" placeholder="S1"' })}</div><div class="column is-3">${field('Delivery', 'delivery', item.delivery || 'says', { type: 'input', attrs: 'data-nested-field="delivery" placeholder="says"' })}</div><div class="column is-4">${field('Language', 'language', item.language || 'English', { type: 'input', attrs: 'data-nested-field="language"' })}</div><div class="column is-8">${field('Exact dialogue or lyrics', 'words', item.words || '', { rows: 2, attrs: 'data-nested-field="words"', builder: 'dialogue' })}</div><div class="column is-12"><label class="checkbox mr-4"><input type="checkbox" data-nested-field="voiceover" ${item.voiceover ? 'checked' : ''}> Off-screen voiceover</label><label class="checkbox mr-4"><input type="checkbox" data-nested-field="acrossCut" ${item.acrossCut ? 'checked' : ''}> Continues across cut</label><label class="checkbox"><input type="checkbox" data-nested-field="cutoff" ${item.cutoff ? 'checked' : ''}> Cut off at video end</label></div></div>`;
+    else if (type === 'text') body = `<div class="columns"><div class="column is-5">${field('Visible text', 'content', item.content || '', { type: 'input', attrs: 'data-nested-field="content"' })}</div><div class="column is-7">${field('Appearance / placement', 'detail', item.detail || '', { type: 'input', attrs: 'data-nested-field="detail" placeholder="as a red neon sign above the doorway"', builder: 'placement', help: 'Begin with “as,” “in,” “at,” or another placement phrase.' })}</div></div>`;
+    else body = field('Sound event', 'content', item.content || '', { rows: 2, attrs: 'data-nested-field="content"', builder: 'soundEvent', help: 'Sound the characters can hear; do not repeat global ambience.' });
     return `<div class="box is-shadowless has-background-light mb-3" data-nested-id="${item.id}" data-shot-id="${shotId}" data-type="${type}"><button class="delete is-pulled-right" type="button" aria-label="Remove ${type}" data-action="remove-nested" data-shot-id="${shotId}" data-type="${type}" data-id="${item.id}"></button>${body}</div>`;
   }
   function sentence(text) { const t = String(text || '').trim(); return t ? (/[.!?]$/.test(t) ? t : `${t}.`) : ''; }
@@ -282,33 +230,92 @@
   }
   function renderOutput() { reindex(); $('#output').textContent = state.mode === 'full' ? generateFull() : generateBase(); }
   function renderAll() { reindex(); renderPromptManager(); renderSettings(); renderKeyframes(); renderReferenceGroups(); renderShots(); renderOutput(); }
-  function updateComposerPreview(shotEl, shot, section) {
-    const draft = section === 'composition' ? compositionDraft(shot) : actionDraft(shot);
-    const preview = $('[data-composer-preview="' + section + '"]', shotEl);
-    const apply = $('[data-action="apply-composer"][data-section="' + section + '"]', shotEl);
-    if (preview) preview.textContent = draft || (section === 'composition' ? 'Fill in the fields above to preview a composition draft.' : 'Add an acting subject and action to preview a progression draft.');
-    if (apply) apply.disabled = !draft;
+  let activeBuilder = null;
+  function builderTarget(button) {
+    const key = button.dataset.builderKey || button.dataset.builderGlobal;
+    if (button.dataset.builderGlobal) return { key, label: button.textContent.trim(), focusSelector: `[data-builder-global="${key}"]`, get: () => state[key] || '', set: value => { state[key] = value; } };
+    const nested = button.closest('[data-nested-id]');
+    if (nested) { const shot = state.shots.find(item => item.id === nested.dataset.shotId); const item = shot[`${nested.dataset.type}s`].find(entry => entry.id === nested.dataset.nestedId); return { key, label: button.textContent.trim(), focusSelector: `[data-nested-id="${nested.dataset.nestedId}"] [data-builder-key="${key}"]`, get: () => item[key] || '', set: value => { item[key] = value; } }; }
+    const ref = button.closest('[data-ref-id]');
+    if (ref) { const item = state.refs[ref.dataset.kind].find(entry => entry.id === ref.dataset.refId); return { key, label: button.textContent.trim(), focusSelector: `[data-ref-id="${ref.dataset.refId}"] [data-builder-key="${key}"]`, get: () => item[key] || '', set: value => { item[key] = value; } }; }
+    const frame = button.closest('[data-keyframe-index]');
+    if (frame) { const item = state.keyframes[Number(frame.dataset.keyframeIndex)]; return { key, label: button.textContent.trim(), focusSelector: `[data-keyframe-index="${frame.dataset.keyframeIndex}"] [data-builder-key="${key}"]`, get: () => item[key] || '', set: value => { item[key] = value; } }; }
+    const shotEl = button.closest('[data-shot-id]');
+    if (shotEl) { const shot = state.shots.find(item => item.id === shotEl.dataset.shotId); return { key, shot, label: button.textContent.trim(), focusSelector: `[data-shot-id="${shot.id}"] [data-builder-key="${key}"]`, get: () => shot[key] || '', set: value => { shot[key] = value; } }; }
+    return null;
   }
-  function updateComposerField(target) {
-    const shotEl = target.closest('[data-shot-id]'); if (!shotEl || !target.dataset.composerField) return false;
-    const shot = state.shots.find(s => s.id === shotEl.dataset.shotId); const section = target.dataset.composerSection;
-    shot.composer[section][target.dataset.composerField] = target.value;
-    updateComposerPreview(shotEl, shot, section); saveAndRender();
-    return true;
+  const builderFields = {
+    composition: [['style', 'Style / medium'], ['framing', 'Framing'], ['subject', 'Subject, appearance, and position'], ['environment', 'Environment / key props'], ['lighting', 'Lighting']],
+    action: [['initial', 'Initial state'], ['subject', 'Acting subject'], ['action', 'Observable action'], ['target', 'Object / target'], ['result', 'Reaction / result'], ['ending', 'End state']],
+    summary: [['subject', 'Main subject / reference labels'], ['flow', 'Shot flow'], ['relationship', 'Reference relationships']],
+    style: [['style', 'Style and medium'], ['lighting', 'Lighting / palette']],
+    soundscape: [['ambience', 'Continuous ambience'], ['physical', 'Physical action sounds'], ['human', 'Non-verbal human sounds']],
+    music: [['instrumentation', 'Instrumentation'], ['tempo', 'Tempo / rhythm'], ['development', 'Dynamic development']],
+    reference: [['identity', 'What it is'], ['source', 'Source / role'], ['features', 'Main features to follow']],
+    retention: [['preservation', 'What is retained or changed'], ['where', 'Where it applies']],
+    detail: [['detail', 'Transition, continuity, or visual direction']],
+    dialogue: [['words', 'Exact dialogue or lyrics']],
+    placement: [['placement', 'Placement / appearance']],
+    soundEvent: [['event', 'Sound event']]
+  };
+  function draftFor(kind, data) {
+    const join = values => values.filter(Boolean).join(', ');
+    if (kind === 'composition') {
+      const body = join([data.style, data.framing && `a ${data.framing} frames`, data.subject, data.environment && `in ${data.environment}`, data.lighting && `under ${data.lighting}`]);
+      if (!body) return '';
+      if (state.mode === 'i2va') return `The shot begins from <Picture 1>, preserving its established composition. ${body}`;
+      if (state.mode === 'fl2va') return `The shot begins from <Picture 1>. ${body}; the composition develops continuously toward <Picture 2>`;
+      if (state.mode === 'l2va') return `${body}; the composition gradually converges on <Picture 1> as the final frame`;
+      return body;
+    }
+    if (kind === 'action') {
+      if (!data.subject || !data.action) return '';
+      const body = `${data.initial ? `Starting from ${data.initial}, ` : ''}${data.subject} ${data.action}${data.target ? ` ${data.target}` : ''}.${data.result ? ` ${data.result}.` : ''}${data.ending ? ` By the end of the shot, ${data.ending}.` : ''}`;
+      if (state.mode === 'i2va') return `The action develops forward from <Picture 1>: ${body}`;
+      if (state.mode === 'fl2va') return `The action continuously carries the scene from <Picture 1> toward <Picture 2>: ${body}`;
+      if (state.mode === 'l2va') return `From a plausible preceding state, ${body} The final movement lands on <Picture 1>.`;
+      return body;
+    }
+    if (kind === 'summary') return join([data.subject, data.flow, data.relationship]);
+    if (kind === 'style') return join([data.style, data.lighting]);
+    if (kind === 'soundscape') return join([data.ambience, data.physical, data.human]);
+    if (kind === 'music') return join([data.instrumentation, data.tempo, data.development]);
+    if (kind === 'reference') return join([data.identity, data.source && `from ${data.source}`, data.features && `with ${data.features}`]);
+    if (kind === 'retention') return join([data.preservation, data.where && `applies in ${data.where}`]);
+    return Object.values(data).filter(Boolean).join(' ');
   }
-
+  function openBuilder(button) {
+    const target = builderTarget(button); if (!target) return;
+    const kind = button.dataset.builderKind;
+    const stored = (kind === 'composition' || kind === 'action') && target.shot ? target.shot.composer[kind] : {};
+    activeBuilder = { button, target, kind, data: clone(stored) };
+    $('#builder-modal-title').textContent = `${button.textContent.trim()} editor`;
+    $('#builder-modal-help').textContent = 'Build a natural-language draft, then apply it to the field that opened this editor.';
+    $('#builder-modal-fields').innerHTML = (builderFields[kind] || []).map(([key, label]) => `<div class="field"><label class="label is-small">${label}</label><div class="control"><input class="input" data-builder-input="${key}" value="${esc(activeBuilder.data[key] || '')}"></div></div>`).join('');
+    $('#builder-draft').value = draftFor(kind, activeBuilder.data) || target.get();
+    $('#builder-modal').classList.add('is-active');
+    window.setTimeout(() => $('[data-builder-input]', $('#builder-modal'))?.focus() || $('#builder-draft').focus(), 0);
+  }
+  function closeBuilder() { if (!activeBuilder) return; const focusSelector = activeBuilder.target.focusSelector; $('#builder-modal').classList.remove('is-active'); activeBuilder = null; document.querySelector(focusSelector)?.focus(); }
+  function applyBuilder() {
+    if (!activeBuilder) return;
+    const draft = $('#builder-draft').value.trim(); const current = activeBuilder.target.get().trim();
+    if (current && current !== draft && !confirm('Replace the existing prose in this field with the builder draft?')) return;
+    activeBuilder.target.set(draft);
+    if ((activeBuilder.kind === 'composition' || activeBuilder.kind === 'action') && activeBuilder.target.shot) activeBuilder.target.shot.composer[activeBuilder.kind] = activeBuilder.data;
+    saveAndRender(); renderAll(); closeBuilder();
+  }
   document.addEventListener('input', event => {
     const target = event.target;
+    if (target.matches('#builder-modal [data-builder-input]') && activeBuilder) { activeBuilder.data[target.dataset.builderInput] = target.value; $('#builder-draft').value = draftFor(activeBuilder.kind, activeBuilder.data); return; }
     if (target.matches('#prompt-name')) { activePrompt().name = target.value.trim() || 'Untitled prompt'; saveLibrary(); return; }
     if (target.matches('#mode, #duration, #soundscape, #music, #full-summary, #full-style')) { saveAndRender(); return; }
-    if (updateComposerField(target)) return;
     const shotEl = target.closest('[data-shot-id]'); if (shotEl && target.dataset.shotField) { const shot = state.shots.find(s => s.id === shotEl.dataset.shotId); shot[target.dataset.shotField] = target.value; saveAndRender(); return; }
     const refEl = target.closest('[data-ref-id]'); if (refEl && target.dataset.refField) { const ref = state.refs[refEl.dataset.kind].find(r => r.id === refEl.dataset.refId); ref[target.dataset.refField] = target.value; saveAndRender(); return; }
     const nestedEl = target.closest('[data-nested-id]'); if (nestedEl && target.dataset.nestedField) { const shot = state.shots.find(s => s.id === nestedEl.dataset.shotId); const key = `${nestedEl.dataset.type}s`; const item = shot[key].find(i => i.id === nestedEl.dataset.nestedId); item[target.dataset.nestedField] = target.type === 'checkbox' ? target.checked : target.value; saveAndRender(); return; }
     const keyframeEl = target.closest('#keyframes'); if (keyframeEl && target.dataset.key === 'description') { state.keyframes[$$('#keyframes article').indexOf(target.closest('article'))].description = target.value; saveAndRender(); }
   });
   document.addEventListener('change', event => {
-    if (updateComposerField(event.target)) return;
     if (event.target.matches('#mode')) { renderAll(); saveAndRender(); }
     if (event.target.matches('#prompt-library')) {
       syncFormState(); saveLibrary();
@@ -326,16 +333,11 @@
     }
     if (event.target.dataset.taskType) { state.taskTypes = $$('[data-task-type]:checked').map(el => el.dataset.taskType); saveAndRender(); }
   });
-  document.addEventListener('toggle', event => {
-    const details = event.target;
-    if (!details.matches('details[data-composer-toggle]')) return;
-    const shotEl = details.closest('[data-shot-id]'); if (!shotEl) return;
-    const shot = state.shots.find(s => s.id === shotEl.dataset.shotId);
-    shot.composer[details.dataset.composerToggle].open = details.open;
-    saveLibrary();
-  }, true);
   document.addEventListener('click', event => {
+    const builderButton = event.target.closest('[data-builder-kind]'); if (builderButton) { openBuilder(builderButton); return; }
     const button = event.target.closest('[data-action]'); if (!button) return; const { action, id, kind, type, shotId, direction } = button.dataset;
+    if (action === 'close-builder') { closeBuilder(); return; }
+    if (action === 'apply-builder') { applyBuilder(); return; }
     if (action === 'add-shot') state.shots.push(defaultShot());
     if (action === 'remove-shot') state.shots = state.shots.filter(s => s.id !== id);
     if (action === 'move-shot') { const index = state.shots.findIndex(s => s.id === id); const next = index + Number(direction); if (next >= 0 && next < state.shots.length) [state.shots[index], state.shots[next]] = [state.shots[next], state.shots[index]]; }
@@ -343,15 +345,9 @@
     if (action === 'remove-ref') state.refs[kind] = state.refs[kind].filter(r => r.id !== id);
     if (action === 'add-nested') { const shot = state.shots.find(s => s.id === shotId); const key = `${type}s`; shot[key].push({ id: uid() }); }
     if (action === 'remove-nested') { const shot = state.shots.find(s => s.id === shotId); const key = `${type}s`; shot[key] = shot[key].filter(item => item.id !== id); }
-    if (action === 'apply-composer') {
-      const shot = state.shots.find(s => s.id === shotId); const draft = button.dataset.section === 'composition' ? compositionDraft(shot) : actionDraft(shot);
-      const key = button.dataset.section === 'composition' ? 'styleComposition' : 'action';
-      if (!draft) return;
-      if (shot[key].trim() && !confirm('Replace the existing prose in this field with the composer draft?')) return;
-      shot[key] = draft;
-    }
     renderAll(); saveAndRender();
   });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape' && activeBuilder) closeBuilder(); });
   $('#copy').addEventListener('click', async () => {
     const output = $('#output'); const copyButton = $('#copy');
     const showCopied = () => {

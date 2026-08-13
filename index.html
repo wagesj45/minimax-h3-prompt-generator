@@ -62,11 +62,9 @@
     .empty-list { padding: 1rem; color: var(--muted); border: 1px dashed #5a5773; border-radius: 6px; text-align: center; }
     .section-heading { border-bottom: 1px solid var(--line); padding-bottom: .5rem; margin: 1.75rem 0 .85rem; }
     .help code { white-space: nowrap; }
-    .composer { margin-top: -.25rem; padding: .85rem; border: 1px solid #4c4770; border-radius: 6px; background: #1a1929; }
-    .composer summary { cursor: pointer; color: #e4deff; font-weight: 600; }
-    .composer .columns { margin-top: .25rem; }
-    .composer-preview { min-height: 3.25rem; padding: .75rem; background: #11111b; border: 1px solid #4b4964; border-radius: 4px; color: #dcd9ec; white-space: pre-wrap; }
-    .composer-warning { color: #f3c985; }
+    .modal-card { width: min(52rem, calc(100vw - 2rem)); }
+    .modal-card-head, .modal-card-body, .modal-card-foot { background: var(--surface-raised); color: var(--ink); border-color: var(--line); }
+    .modal-card-title { color: var(--ink); }
     @media (max-width: 1023px) {
       .sticky-output { position: static; height: auto; display: block; }
       .prompt-output { min-height: 32rem; }
@@ -148,8 +146,8 @@
                 <div id="task-types" class="control"></div>
                 <p class="help">Select every relationship that applies; they appear in the summary prefix.</p>
               </div>
-              <div class="field"><label class="label" for="full-summary">Summary</label><div class="control"><textarea class="textarea" id="full-summary" rows="3" placeholder="Describe the target video, its shot flow, and its main reference relationships."></textarea></div></div>
-              <div class="field"><label class="label" for="full-style">Style opening</label><div class="control"><textarea class="textarea" id="full-style" rows="2" placeholder="Cinematic, literary music-video style with soft lighting…"></textarea></div><p class="help">One or two sentences placed before Shot 1 in <code>detailed_description</code>.</p></div>
+              <div class="field"><label class="label" for="full-summary">Summary</label><div class="control"><textarea class="textarea" id="full-summary" rows="3" placeholder="Describe the target video, its shot flow, and its main reference relationships."></textarea></div><button class="button is-small is-link is-light mt-2" type="button" data-builder-kind="summary" data-builder-global="fullSummary">Build summary</button></div>
+              <div class="field"><label class="label" for="full-style">Style opening</label><div class="control"><textarea class="textarea" id="full-style" rows="2" placeholder="Cinematic, literary music-video style with soft lighting…"></textarea></div><button class="button is-small is-link is-light mt-2" type="button" data-builder-kind="style" data-builder-global="fullStyle">Build style opening</button><p class="help">One or two sentences placed before Shot 1 in <code>detailed_description</code>.</p></div>
             </div>
             <div id="reference-groups"></div>
           </section>
@@ -164,8 +162,8 @@
 
           <section class="box">
             <h2 class="title is-5">Global audio</h2>
-            <div class="field"><label class="label" for="soundscape">Overall soundscape</label><div class="control"><textarea class="textarea" id="soundscape" rows="3" placeholder="Ambience, physical action sounds, and non-verbal human sounds across the full video."></textarea></div></div>
-            <div class="field mb-0"><label class="label" for="music">Non-diegetic music</label><div class="control"><textarea class="textarea" id="music" rows="3" placeholder="Audience-only score: instrumentation, tempo, rhythm, and dynamic development. Use N/A if absent."></textarea></div></div>
+            <div class="field"><label class="label" for="soundscape">Overall soundscape</label><div class="control"><textarea class="textarea" id="soundscape" rows="3" placeholder="Ambience, physical action sounds, and non-verbal human sounds across the full video."></textarea></div><button class="button is-small is-link is-light mt-2" type="button" data-builder-kind="soundscape" data-builder-global="soundscape">Build soundscape</button></div>
+            <div class="field mb-0"><label class="label" for="music">Non-diegetic music</label><div class="control"><textarea class="textarea" id="music" rows="3" placeholder="Audience-only score: instrumentation, tempo, rhythm, and dynamic development. Use N/A if absent."></textarea></div><button class="button is-small is-link is-light mt-2" type="button" data-builder-kind="music" data-builder-global="music">Build music</button></div>
           </section>
           <div class="buttons is-right"><button class="button is-danger is-light" type="button" id="reset">Reset draft</button></div>
         </div>
@@ -180,6 +178,14 @@
       </div>
     </div>
   </main>
+  <div class="modal" id="builder-modal" role="dialog" aria-modal="true" aria-labelledby="builder-modal-title">
+    <div class="modal-background" data-action="close-builder"></div>
+    <div class="modal-card">
+      <header class="modal-card-head"><p class="modal-card-title" id="builder-modal-title">Builder</p><button class="delete" type="button" aria-label="Close" data-action="close-builder"></button></header>
+      <section class="modal-card-body"><p class="help mb-4" id="builder-modal-help"></p><div id="builder-modal-fields"></div><div class="field mt-4"><label class="label" for="builder-draft">Generated draft</label><div class="control"><textarea class="textarea" id="builder-draft" rows="5"></textarea></div></div></section>
+      <footer class="modal-card-foot is-justify-content-flex-end"><button class="button" type="button" data-action="close-builder">Cancel</button><button class="button is-primary" type="button" data-action="apply-builder">Apply draft</button></footer>
+    </div>
+  </div>
   <script src="app.js"></script>
 </body>
 </html>
